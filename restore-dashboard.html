@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restore Information Management | PROMAN KPI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy: #003680;
+    --navy-deep: #00224f;
+    --navy-light: #e8edf5;
+    --orange: #F58220;
+    --orange-light: #fdf0e3;
+    --white: #ffffff;
+    --off-white: #f5f7fa;
+    --border: #e2e8f2;
+    --text: #1a2540;
+    --text-muted: #6b7a99;
+    --green: #22c55e;
+    --green-light: #f0faf4;
+    --red: #ef4444;
+    --red-light: #fef2f2;
+    --amber: #f59e0b;
+    --amber-light: #fffbeb;
+    --blue-light: #eff6ff;
+    --shadow: 0 1px 4px rgba(0,54,128,0.07), 0 4px 16px rgba(0,54,128,0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Figtree', sans-serif;
+    background: var(--off-white);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--navy);
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+
+  .proman-logo { height: 28px; filter: brightness(0) invert(1); }
+
+  .divider { width: 1px; height: 24px; background: rgba(255,255,255,0.2); }
+
+  .client-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+  }
+
+  .client-name {
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  .updated-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+  }
+
+  .live-dot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.04em;
+  }
+
+  .live-dot::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px #4ade80;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* FILTERS */
+  .filters {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  select {
+    font-family: 'Figtree', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--off-white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7a99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  select:focus { outline: none; border-color: var(--navy); }
+
+  .view-tabs { display: flex; gap: 4px; margin-left: auto; }
+
+  .tab {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--off-white);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .tab.active {
+    background: var(--navy);
+    color: white;
+    border-color: var(--navy);
+  }
+
+  /* MAIN */
+  main { padding: 24px 28px; max-width: 1440px; margin: 0 auto; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  /* KPI CARDS */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .kpi-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 18px 18px 14px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.35s ease both;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,54,128,0.1);
+  }
+
+  .kpi-card .accent-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 12px 0 0 12px;
+  }
+
+  .kpi-card.navy .accent-bar { background: var(--navy); }
+  .kpi-card.orange .accent-bar { background: var(--orange); }
+  .kpi-card.green .accent-bar { background: var(--green); }
+  .kpi-card.amber .accent-bar { background: var(--amber); }
+  .kpi-card.red .accent-bar { background: var(--red); }
+
+  .kpi-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .kpi-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 8px;
+  }
+
+  .kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+
+  .kpi-trend.up { background: var(--green-light); color: #16a34a; }
+  .kpi-trend.down { background: var(--red-light); color: #dc2626; }
+  .kpi-trend.warn { background: var(--amber-light); color: #b45309; }
+  .kpi-trend.neutral { background: var(--off-white); color: var(--text-muted); }
+
+  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* CHART CARDS */
+  .chart-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    animation: fadeUp 0.35s ease both;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .card-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .chart-wrap { position: relative; }
+
+  /* BOTTOM GRID */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--off-white); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--off-white); }
+  tbody td { padding: 9px 0; color: var(--text); }
+
+  .pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .pill.ok { background: var(--green-light); color: #16a34a; }
+  .pill.warn { background: var(--amber-light); color: #b45309; }
+  .pill.risk { background: var(--red-light); color: #dc2626; }
+
+  /* COMPLIANCE */
+  .comp-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .comp-item {}
+  .comp-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .comp-name { font-size: 12px; font-weight: 500; color: var(--text); }
+  .comp-pct { font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .comp-bar-bg { background: var(--off-white); border-radius: 4px; height: 6px; overflow: hidden; }
+  .comp-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .comp-bar-fill.green { background: var(--green); }
+  .comp-bar-fill.amber { background: var(--amber); }
+  .comp-bar-fill.red { background: var(--red); }
+
+  /* AWR */
+  .awr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .awr-box {
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .awr-box.reached { background: var(--red-light); border: 1px solid #fecaca; }
+  .awr-box.approaching { background: var(--amber-light); border: 1px solid #fde68a; }
+  .awr-num { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .awr-box.reached .awr-num { color: #dc2626; }
+  .awr-box.approaching .awr-num { color: #b45309; }
+  .awr-lbl { font-size: 11px; font-weight: 600; }
+  .awr-box.reached .awr-lbl { color: #dc2626; }
+  .awr-box.approaching .awr-lbl { color: #b45309; }
+  .awr-desc { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+  .awr-breakdown { margin-top: 14px; }
+  .awr-site-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--off-white);
+    font-size: 12px;
+  }
+  .awr-site-row:last-child { border-bottom: none; }
+  .awr-site-name { color: var(--text); font-weight: 500; }
+  .awr-site-nums { display: flex; gap: 8px; }
+  .awr-reached-num { color: #dc2626; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .awr-approaching-num { color: #b45309; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  /* FOOTER */
+  footer {
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 14px 28px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  footer strong { color: var(--navy); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+  .kpi-card:nth-child(5) { animation-delay: 0.25s; }
+  .kpi-card:nth-child(6) { animation-delay: 0.3s; }
+
+  @media (max-width: 960px) {
+    .chart-row, .bottom-row { grid-template-columns: 1fr; }
+    main { padding: 16px; }
+    .filters { padding: 10px 16px; }
+    header { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <img src="https://proman-uk.com/img/logo.png" class="proman-logo" alt="PROMAN">
+    <div class="divider"></div>
+    <div>
+      <div class="client-label">Client Dashboard</div>
+      <div class="client-name">Restore Information Management</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="updated-tag" id="updatedTag">W/E 09 May 2025</span>
+    <span class="live-dot">LIVE</span>
+  </div>
+</header>
+
+<div class="filters">
+  <span class="filter-label">Filter</span>
+  <select id="siteFilter" onchange="render()">
+    <option value="all">All Sites</option>
+    <option value="Livingston">Livingston</option>
+    <option value="Swinton">Swinton</option>
+    <option value="Swadlincote">Swadlincote</option>
+    <option value="Coventry">Coventry</option>
+  </select>
+  <select id="weekFilter" onchange="render()">
+    <option value="7">W/E 09 May 2025</option>
+    <option value="6">W/E 02 May 2025</option>
+    <option value="5">W/E 25 Apr 2025</option>
+    <option value="4">W/E 18 Apr 2025</option>
+    <option value="3">W/E 11 Apr 2025</option>
+    <option value="2">W/E 04 Apr 2025</option>
+    <option value="1">W/E 28 Mar 2025</option>
+    <option value="0">W/E 21 Mar 2025</option>
+  </select>
+  <div class="view-tabs">
+    <div class="tab active" onclick="setView('weekly',this)">Weekly</div>
+    <div class="tab" onclick="setView('monthly',this)">Monthly</div>
+    <div class="tab" onclick="setView('ytd',this)">YTD</div>
+  </div>
+</div>
+
+<main>
+
+  <div class="section-label">Summary — current week</div>
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="chart-row">
+    <div class="card" style="animation-delay:0.32s">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Headcount & Fill Rate</div>
+          <div class="card-sub" id="chartSubFill">Rolling 8 weeks — all sites</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:210px"><canvas id="fillChart" role="img" aria-label="Headcount and fill rate trend"></canvas></div>
+    </div>
+    <div class="card" style="animation-delay:0.37s">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Headcount by Site</div>
+          <div class="card-sub">Current week</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:210px"><canvas id="siteChart" role="img" aria-label="Headcount split by site"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="card" style="animation-delay:0.42s">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Absence Rate & Leavers</div>
+          <div class="card-sub" id="chartSubAbs">Rolling 8 weeks — all sites</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:210px"><canvas id="absChart" role="img" aria-label="Absence rate and leavers trend"></canvas></div>
+    </div>
+    <div class="card" style="animation-delay:0.47s">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Starters vs Leavers</div>
+          <div class="card-sub" id="chartSubSL">Rolling 8 weeks</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:210px"><canvas id="slChart" role="img" aria-label="Starters vs leavers comparison"></canvas></div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="card" style="animation-delay:0.52s">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Site Breakdown</div>
+          <div class="card-sub">Fill rate by site — current week</div>
+        </div>
+      </div>
+      <table id="siteTable">
+        <thead><tr><th>Site</th><th>Req'd</th><th>Actual</th><th>Fill</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card" style="animation-delay:0.57s">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Compliance</div>
+          <div class="card-sub">Current week — all sites</div>
+        </div>
+      </div>
+      <div class="comp-list" id="compList"></div>
+    </div>
+
+    <div class="card" style="animation-delay:0.62s">
+      <div class="card-header">
+        <div>
+          <div class="card-title">AWR Tracker</div>
+          <div class="card-sub">Agency Worker Regulations</div>
+        </div>
+      </div>
+      <div class="awr-grid" id="awrGrid"></div>
+      <div class="awr-breakdown" id="awrBreakdown"></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Powered by <strong>PROMAN</strong> &nbsp;·&nbsp; Data supplied by Restore Information Management Operations &nbsp;·&nbsp; Confidential — not for distribution
+</footer>
+
+<script>
+const DATA_FILE = 'restore_data.json';
+
+let SITES = [], WEEKS = [], WEEK_LABELS = [], RAW = [];
+let currentView = 'weekly';
+let fillChartInst, siteChartInst, absChartInst, slChartInst;
+
+// Converts Excel date serial number to a week-ending label (DD MMM)
+function excelSerialToLabel(serial) {
+  if (!serial || isNaN(serial)) return null;
+  const d = new Date(Math.round((parseFloat(serial) - 25569) * 86400 * 1000));
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+}
+
+function mapRecord(d, weekMap) {
+  // Keys use real newline characters as separators from Power Automate
+  const NL = String.fromCharCode(10);
+  const site    = d['site'] || d['Site Name'] || '';
+  const weekRaw = d['week'] !== undefined
+    ? d['week']
+    : d['Week Ending' + NL + '(DD/MM/YYYY)'];
+  const weekLabel = typeof weekRaw === 'number' && weekRaw > 1000
+    ? excelSerialToLabel(weekRaw)
+    : (d['week'] !== undefined ? null : String(weekRaw));
+  const w = weekLabel
+    ? (weekMap[weekLabel] !== undefined ? weekMap[weekLabel] : -1)
+    : (weekRaw || 0);
+
+  return {
+    s:    site,
+    w:    w,
+    weekLabel: weekLabel,
+    req:  parseFloat(d['hc_req']  || d['Headcount' + NL + 'Required']  || 0) || 0,
+    act:  parseFloat(d['hc_act']  || d['Headcount' + NL + 'Actual']    || 0) || 0,
+    hrs:  parseFloat(d['hours']   || d['Hours' + NL + 'Worked']        || 0) || 0,
+    sa:   parseFloat(d['shifts_avail']  || d['Shifts' + NL + 'Available'] || 0) || 0,
+    sab:  parseFloat(d['shifts_absent'] || d['Shifts' + NL + 'Absent']    || 0) || 0,
+    lv:   parseFloat(d['leavers'] || d['Leavers' + NL + '(week)']      || 0) || 0,
+    st:   parseFloat(d['starters']|| d['Starters' + NL + '(week)']     || 0) || 0,
+    rtw:  parseFloat(d['rtw_pct'] || d['RTW' + NL + 'Checked %']       || 0) || 0,
+    ind:  parseFloat(d['induction_pct'] || d['Induction' + NL + 'Complete %'] || 0) || 0,
+    awr:  parseFloat(d['awr_workers']   || d['AWR' + NL + 'Workers']   || 0) || 0,
+    awra: parseFloat(d['awr_approaching']
+                  || d['Workers' + NL + 'Approaching' + NL + 'AWR (opt)'] || 0) || 0,
+  };
+}
+function showError(msg) {
+  document.getElementById('kpiRow').innerHTML =
+    '<div style="grid-column:1/-1;padding:24px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;color:#dc2626;font-size:13px;">' +
+    '<strong>Unable to load data</strong><br>' + msg + '</div>';
+}
+
+function populateSiteFilter() {
+  const sel = document.getElementById('siteFilter');
+  sel.innerHTML = '<option value="all">All Sites</option>';
+  SITES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    sel.appendChild(opt);
+  });
+}
+
+function populateWeekFilter() {
+  const sel = document.getElementById('weekFilter');
+  sel.innerHTML = '';
+  WEEKS.slice().reverse().forEach((w, i) => {
+    const opt = document.createElement('option');
+    opt.value = WEEKS.length - 1 - i;
+    opt.textContent = 'W/E ' + w + ' 2025';
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function getFiltered(site, weekIdx) {
+  return RAW.filter(d => (site === 'all' || d.s === site) && d.w === weekIdx);
+}
+
+function sum(arr, key) { return arr.reduce((a, b) => a + b[key], 0); }
+function avg(arr, key) { return arr.length ? sum(arr, key) / arr.length : 0; }
+
+function aggregateForView(site) {
+  if (currentView === 'weekly') {
+    return WEEKS.map((_, wi) => {
+      const rows = RAW.filter(d => (site === 'all' || d.s === site) && d.w === wi);
+      return { req: sum(rows,'req'), act: sum(rows,'act'), hrs: sum(rows,'hrs'),
+               sa: sum(rows,'sa'), sab: sum(rows,'sab'), lv: sum(rows,'lv'), st: sum(rows,'st') };
+    });
+  }
+  const months = [[0,1],[2,3],[4,5],[6,7]];
+  return months.map(wks => {
+    const rows = RAW.filter(d => (site === 'all' || d.s === site) && wks.includes(d.w));
+    return { req: Math.round(sum(rows,'req')/2), act: Math.round(sum(rows,'act')/2),
+             hrs: sum(rows,'hrs'), sa: sum(rows,'sa'), sab: sum(rows,'sab'),
+             lv: sum(rows,'lv'), st: sum(rows,'st') };
+  });
+}
+
+function getChartLabels() {
+  if (currentView === 'monthly') return ['Feb','Mar','Apr','May'];
+  if (currentView === 'ytd')     return ['Jan','Feb','Mar','Apr','May'];
+  return WEEK_LABELS;
+}
+
+function render() {
+  const site    = document.getElementById('siteFilter').value;
+  const weekIdx = parseInt(document.getElementById('weekFilter').value);
+
+  const curr = getFiltered(site, weekIdx);
+  const prev = getFiltered(site, Math.max(0, weekIdx - 1));
+
+  const hcReq = sum(curr,'req'), hcAct = sum(curr,'act');
+  const fill  = hcReq > 0 ? hcAct / hcReq : 0;
+  const hrs   = sum(curr,'hrs');
+  const sa    = sum(curr,'sa'), sab = sum(curr,'sab');
+  const absR  = sa > 0 ? sab / sa : 0;
+  const lv    = sum(curr,'lv'), st = sum(curr,'st');
+  const awr   = sum(curr,'awr'), awra = sum(curr,'awra');
+
+  const prevFill = sum(prev,'req') > 0 ? sum(prev,'act') / sum(prev,'req') : 0;
+  const prevAbs  = sum(prev,'sa')  > 0 ? sum(prev,'sab') / sum(prev,'sa')  : 0;
+  const prevLv   = sum(prev,'lv');
+
+  const fillDelta = ((fill - prevFill) * 100).toFixed(1);
+  const absDelta  = ((absR - prevAbs)  * 100).toFixed(1);
+  const lvDelta   = lv - prevLv;
+
+  const kpiData = [
+    { label:'Workers On-site', val: hcAct.toLocaleString(),
+      trend: hcAct >= hcReq ? 'up' : 'warn',
+      trendTxt: (hcAct >= hcReq ? '▲ ' : '▼ ') + Math.abs(hcAct - sum(prev,'act')) + ' vs last week',
+      sub: 'Required: ' + hcReq, accent: 'orange' },
+    { label:'Fill Rate', val: (fill*100).toFixed(1)+'%',
+      trend: fill >= 0.95 ? 'up' : fill >= 0.90 ? 'warn' : 'down',
+      trendTxt: (parseFloat(fillDelta) >= 0 ? '▲ ' : '▼ ') + Math.abs(fillDelta) + '% vs last week',
+      sub: 'Target: 95%', accent: fill >= 0.95 ? 'green' : 'amber' },
+    { label:'Hours Worked', val: hrs.toLocaleString(),
+      trend: 'neutral', trendTxt: 'Week total',
+      sub: 'All sites combined', accent: 'navy' },
+    { label:'Absence Rate', val: (absR*100).toFixed(1)+'%',
+      trend: absR <= 0.03 ? 'up' : absR <= 0.05 ? 'warn' : 'down',
+      trendTxt: (parseFloat(absDelta) <= 0 ? '▼ improving ' : '▲ ') + Math.abs(absDelta) + '% vs last week',
+      sub: sab + ' shifts missed of ' + sa, accent: absR <= 0.03 ? 'green' : 'amber' },
+    { label:'Leavers', val: lv,
+      trend: lv <= 3 ? 'up' : lv <= 6 ? 'warn' : 'down',
+      trendTxt: (lvDelta > 0 ? '▲ ' : '▼ ') + Math.abs(lvDelta) + ' vs last week',
+      sub: 'Starters this week: ' + st, accent: lv <= 3 ? 'green' : 'red' },
+    { label:'AWR Workers', val: awr,
+      trend: awr === 0 ? 'up' : 'warn',
+      trendTxt: awra + ' approaching threshold',
+      sub: 'Reached 12-week mark', accent: awr > 5 ? 'red' : 'amber' },
+  ];
+
+  document.getElementById('kpiRow').innerHTML = kpiData.map((k, i) => `
+    <div class="kpi-card ${k.accent}" style="animation-delay:${0.05+i*0.05}s">
+      <div class="accent-bar"></div>
+      <div class="kpi-lbl">${k.label}</div>
+      <div class="kpi-val">${k.val}</div>
+      <span class="kpi-trend ${k.trend}">${k.trendTxt}</span>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  const sitesToShow = site === 'all' ? SITES : [site];
+  const tbody = document.querySelector('#siteTable tbody');
+  tbody.innerHTML = sitesToShow.map(s => {
+    const r = curr.find(d => d.s === s);
+    if (!r) return '';
+    const fr = r.req > 0 ? r.act / r.req : 0;
+    const pillClass = fr >= 0.95 ? 'ok' : fr >= 0.90 ? 'warn' : 'risk';
+    const pillTxt   = fr >= 0.95 ? 'On target' : fr >= 0.90 ? 'Near miss' : 'At risk';
+    return `<tr>
+      <td style="font-weight:500">${s}</td>
+      <td>${r.req}</td><td>${r.act}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${(fr*100).toFixed(1)}%</td>
+      <td><span class="pill ${pillClass}">${pillTxt}</span></td>
+    </tr>`;
+  }).join('');
+
+  const rtwAvg = avg(curr,'rtw'), indAvg = avg(curr,'ind');
+  document.getElementById('compList').innerHTML = [
+    { name:'Right to Work', pct: rtwAvg },
+    { name:'Induction Complete', pct: indAvg }
+  ].map(c => {
+    const pct = (c.pct*100).toFixed(1);
+    const cls   = c.pct >= 0.98 ? 'green' : c.pct >= 0.93 ? 'amber' : 'red';
+    const color = c.pct >= 0.98 ? '#16a34a' : c.pct >= 0.93 ? '#b45309' : '#dc2626';
+    return `<div class="comp-item">
+      <div class="comp-top">
+        <span class="comp-name">${c.name}</span>
+        <span class="comp-pct" style="color:${color}">${pct}%</span>
+      </div>
+      <div class="comp-bar-bg"><div class="comp-bar-fill ${cls}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('awrGrid').innerHTML = `
+    <div class="awr-box reached">
+      <div class="awr-num">${awr}</div>
+      <div class="awr-lbl">Reached AWR</div>
+      <div class="awr-desc">At or past 12 weeks</div>
+    </div>
+    <div class="awr-box approaching">
+      <div class="awr-num">${awra}</div>
+      <div class="awr-lbl">Approaching</div>
+      <div class="awr-desc">Within 4 weeks</div>
+    </div>`;
+
+  document.getElementById('awrBreakdown').innerHTML = `
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:6px">By site</div>
+    ${sitesToShow.map(s => {
+      const r = curr.find(d => d.s === s);
+      if (!r) return '';
+      return `<div class="awr-site-row">
+        <span class="awr-site-name">${s}</span>
+        <div class="awr-site-nums">
+          <span class="awr-reached-num">${r.awr} reached</span>
+          <span style="color:var(--border)">·</span>
+          <span class="awr-approaching-num">${r.awra} approaching</span>
+        </div>
+      </div>`;
+    }).join('')}`;
+
+  updateCharts(site, weekIdx);
+}
+
+function updateCharts(site, weekIdx) {
+  const agg    = aggregateForView(site);
+  const labels = getChartLabels();
+
+  const hcData   = agg.map(d => d.act);
+  const fillData = agg.map(d => d.req > 0 ? parseFloat((d.act/d.req*100).toFixed(1)) : 0);
+  const absData  = agg.map(d => d.sa  > 0 ? parseFloat((d.sab/d.sa*100).toFixed(2))  : 0);
+  const lvData   = agg.map(d => d.lv);
+  const stData   = agg.map(d => d.st);
+
+  const commonOpts = {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode:'index', intersect:false },
+    plugins: {
+      legend: { display:false },
+      tooltip: { bodyFont:{family:'Figtree'}, titleFont:{family:'Figtree',weight:'600'} }
+    }
+  };
+
+  if (fillChartInst) fillChartInst.destroy();
+  fillChartInst = new Chart(document.getElementById('fillChart'), {
+    data: { labels, datasets: [
+      { type:'bar', label:'Headcount', data:hcData,
+        backgroundColor:'rgba(0,54,128,0.12)', borderColor:'#003680',
+        borderWidth:1.5, borderRadius:4, yAxisID:'y' },
+      { type:'line', label:'Fill Rate %', data:fillData,
+        borderColor:'#F58220', backgroundColor:'rgba(245,130,32,0.06)',
+        borderWidth:2.5, pointBackgroundColor:'#F58220', pointRadius:3,
+        tension:0.4, fill:true, yAxisID:'y1' }
+    ]},
+    options: { ...commonOpts, scales: {
+      y:  { position:'left',  grid:{color:'#e2e8f2'}, ticks:{font:{family:'JetBrains Mono',size:10}} },
+      y1: { position:'right', min:80, max:102, grid:{drawOnChartArea:false},
+            ticks:{font:{family:'JetBrains Mono',size:10}, callback: v => v+'%'} },
+      x:  { grid:{display:false}, ticks:{font:{family:'Figtree',size:11}} }
+    }}
+  });
+
+  if (siteChartInst) siteChartInst.destroy();
+  const latestWeek  = RAW.filter(d => (site === 'all' || d.s === site) && d.w === weekIdx);
+  const siteLabels  = site === 'all' ? SITES : [site];
+  const siteVals    = siteLabels.map(s => { const r = latestWeek.find(d => d.s === s); return r ? r.act : 0; });
+  siteChartInst = new Chart(document.getElementById('siteChart'), {
+    type:'doughnut',
+    data: { labels:siteLabels, datasets:[{
+      data:siteVals, backgroundColor:['#003680','#F58220','#0d5c9e','#ffa04d'],
+      borderWidth:0, hoverOffset:4
+    }]},
+    options: { responsive:true, maintainAspectRatio:false, cutout:'65%',
+      plugins: {
+        legend:{ position:'bottom', labels:{font:{family:'Figtree',size:11},boxWidth:10,padding:10} },
+        tooltip:{ bodyFont:{family:'Figtree'} }
+      }
+    }
+  });
+
+  if (absChartInst) absChartInst.destroy();
+  absChartInst = new Chart(document.getElementById('absChart'), {
+    data: { labels, datasets: [
+      { type:'line', label:'Absence Rate %', data:absData,
+        borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.07)',
+        borderWidth:2.5, pointBackgroundColor:'#f59e0b', pointRadius:3,
+        tension:0.4, fill:true, yAxisID:'y' },
+      { type:'bar', label:'Leavers', data:lvData,
+        backgroundColor:'rgba(239,68,68,0.15)', borderColor:'#ef4444',
+        borderWidth:1.5, borderRadius:4, yAxisID:'y1' }
+    ]},
+    options: { ...commonOpts, scales: {
+      y:  { position:'left',  grid:{color:'#e2e8f2'},
+            ticks:{font:{family:'JetBrains Mono',size:10}, callback: v => v+'%'} },
+      y1: { position:'right', grid:{drawOnChartArea:false}, ticks:{font:{family:'JetBrains Mono',size:10}} },
+      x:  { grid:{display:false}, ticks:{font:{family:'Figtree',size:11}} }
+    }}
+  });
+
+  if (slChartInst) slChartInst.destroy();
+  slChartInst = new Chart(document.getElementById('slChart'), {
+    type:'bar',
+    data: { labels, datasets: [
+      { label:'Starters', data:stData,
+        backgroundColor:'rgba(34,197,94,0.2)', borderColor:'#22c55e',
+        borderWidth:1.5, borderRadius:4 },
+      { label:'Leavers', data:lvData,
+        backgroundColor:'rgba(239,68,68,0.15)', borderColor:'#ef4444',
+        borderWidth:1.5, borderRadius:4 }
+    ]},
+    options: { ...commonOpts,
+      scales: {
+        y: { grid:{color:'#e2e8f2'}, ticks:{font:{family:'JetBrains Mono',size:10}} },
+        x: { grid:{display:false}, ticks:{font:{family:'Figtree',size:11}} }
+      },
+      plugins: {
+        legend:{ position:'bottom', labels:{font:{family:'Figtree',size:11},boxWidth:10,padding:10} },
+        tooltip:{ bodyFont:{family:'Figtree'} }
+      }
+    }
+  });
+}
+
+function setView(v, el) {
+  currentView = v;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+fetch(DATA_FILE)
+  .then(res => {
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' — file not found at ' + DATA_FILE);
+    return res.json();
+  })
+  .then(json => {
+    const NL = String.fromCharCode(10);
+    const validRows = json.data.filter(d => {
+      const site = d['site'] || d['Site Name'] || '';
+      const req  = d['hc_req'] || d['Headcount' + NL + 'Required'] || '';
+      return site.trim() !== '' && req.toString().trim() !== '';
+    });
+    let weekLabels = json.weeks || [];
+    if (!weekLabels.length) {
+      const seen = new Map();
+      validRows.forEach(d => {
+        const raw = d['Week Ending' + NL + '(DD/MM/YYYY)'];
+        if (raw && !seen.has(raw)) seen.set(raw, excelSerialToLabel(raw));
+      });
+      weekLabels = Array.from(seen.values()).filter(Boolean);
+    }
+    const weekMap = {};
+    weekLabels.forEach((lbl, i) => { weekMap[lbl] = i; });
+    WEEKS       = weekLabels;
+    WEEK_LABELS = weekLabels;
+    RAW         = validRows.map(d => mapRecord(d, weekMap));
+    SITES = (json.sites && json.sites.length)
+      ? json.sites
+      : [...new Set(RAW.map(d => d.s).filter(Boolean))];
+    document.getElementById('updatedTag').textContent = 'W/E ' + json.last_updated;
+    populateSiteFilter();
+    populateWeekFilter();
+    render();
+  })
+  .catch(err => {
+    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+      showError('If viewing locally, open via Live Server in VS Code rather than double-clicking the file.');
+    } else {
+      showError(err.message);
+    }
+  });
+</script>
+</body>
+</html>
