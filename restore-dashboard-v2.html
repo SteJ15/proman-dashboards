@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -532,45 +532,19 @@ let SITES = [], WEEKS = [], WEEK_LABELS = [], RAW = [];
 let currentView = 'weekly';
 let fillChartInst, siteChartInst, absChartInst, slChartInst;
 
-// Converts Excel date serial number to a week-ending label (DD MMM)
 function excelSerialToLabel(serial) {
   if (!serial || isNaN(serial)) return null;
   const d = new Date(Math.round((parseFloat(serial) - 25569) * 86400 * 1000));
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 }
 
-function mapRecord(d, weekMap) {
-  // Keys use real newline characters as separators from Power Automate
-  const NL = String.fromCharCode(10);
-  const site    = d['site'] || d['Site Name'] || '';
-  const weekRaw = d['week'] !== undefined
-    ? d['week']
-    : d['Week Ending' + NL + '(DD/MM/YYYY)'];
-  const weekLabel = typeof weekRaw === 'number' && weekRaw > 1000
-    ? excelSerialToLabel(weekRaw)
-    : (d['week'] !== undefined ? null : String(weekRaw));
-  const w = weekLabel
-    ? (weekMap[weekLabel] !== undefined ? weekMap[weekLabel] : -1)
-    : (weekRaw || 0);
-
-  return {
-    s:    site,
-    w:    w,
-    weekLabel: weekLabel,
-    req:  parseFloat(d['hc_req']  || d['Headcount' + NL + 'Required']  || 0) || 0,
-    act:  parseFloat(d['hc_act']  || d['Headcount' + NL + 'Actual']    || 0) || 0,
-    hrs:  parseFloat(d['hours']   || d['Hours' + NL + 'Worked']        || 0) || 0,
-    sa:   parseFloat(d['shifts_avail']  || d['Shifts' + NL + 'Available'] || 0) || 0,
-    sab:  parseFloat(d['shifts_absent'] || d['Shifts' + NL + 'Absent']    || 0) || 0,
-    lv:   parseFloat(d['leavers'] || d['Leavers' + NL + '(week)']      || 0) || 0,
-    st:   parseFloat(d['starters']|| d['Starters' + NL + '(week)']     || 0) || 0,
-    rtw:  parseFloat(d['rtw_pct'] || d['RTW' + NL + 'Checked %']       || 0) || 0,
-    ind:  parseFloat(d['induction_pct'] || d['Induction' + NL + 'Complete %'] || 0) || 0,
-    awr:  parseFloat(d['awr_workers']   || d['AWR' + NL + 'Workers']   || 0) || 0,
-    awra: parseFloat(d['awr_approaching']
-                  || d['Workers' + NL + 'Approaching' + NL + 'AWR (opt)'] || 0) || 0,
-  };
+function getVal(d, ...keys) {
+  for (const k of keys) {
+    if (d[k] !== undefined && d[k] !== null && d[k] !== '') return d[k];
+  }
+  return 0;
 }
+
 function showError(msg) {
   document.getElementById('kpiRow').innerHTML =
     '<div style="grid-column:1/-1;padding:24px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;color:#dc2626;font-size:13px;">' +
@@ -593,7 +567,7 @@ function populateWeekFilter() {
   WEEKS.slice().reverse().forEach((w, i) => {
     const opt = document.createElement('option');
     opt.value = WEEKS.length - 1 - i;
-    opt.textContent = 'W/E ' + w + ' 2025';
+    opt.textContent = 'W/E ' + w;
     if (i === 0) opt.selected = true;
     sel.appendChild(opt);
   });
@@ -603,7 +577,7 @@ function getFiltered(site, weekIdx) {
   return RAW.filter(d => (site === 'all' || d.s === site) && d.w === weekIdx);
 }
 
-function sum(arr, key) { return arr.reduce((a, b) => a + b[key], 0); }
+function sum(arr, key) { return arr.reduce((a, b) => a + (b[key] || 0), 0); }
 function avg(arr, key) { return arr.length ? sum(arr, key) / arr.length : 0; }
 
 function aggregateForView(site) {
@@ -858,44 +832,91 @@ function setView(v, el) {
 
 fetch(DATA_FILE)
   .then(res => {
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' — file not found at ' + DATA_FILE);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
   })
   .then(json => {
     const NL = String.fromCharCode(10);
+
+    // Filter empty rows
     const validRows = json.data.filter(d => {
       const site = d['site'] || d['Site Name'] || '';
-      const req  = d['hc_req'] || d['Headcount' + NL + 'Required'] || '';
+      const reqKey = Object.keys(d).find(k => k.replace(/[\n\r]/g,'').toLowerCase() === 'headcountrequired');
+      const req = d['hc_req'] || (reqKey ? d[reqKey] : '') || '';
       return site.trim() !== '' && req.toString().trim() !== '';
     });
-    let weekLabels = json.weeks || [];
-    if (!weekLabels.length) {
-      const seen = new Map();
-      validRows.forEach(d => {
-        const raw = d['Week Ending' + NL + '(DD/MM/YYYY)'];
-        if (raw && !seen.has(raw)) seen.set(raw, excelSerialToLabel(raw));
-      });
-      weekLabels = Array.from(seen.values()).filter(Boolean);
-    }
+
+    // Build week labels from data
     const weekMap = {};
-    weekLabels.forEach((lbl, i) => { weekMap[lbl] = i; });
-    WEEKS       = weekLabels;
-    WEEK_LABELS = weekLabels;
-    RAW         = validRows.map(d => mapRecord(d, weekMap));
+    const weekLabels = [];
+    validRows.forEach(d => {
+      const rawWeek = d['week'] !== undefined
+        ? d['week']
+        : (() => { const k = Object.keys(d).find(k => k.replace(/[\n\r]/g,'').toLowerCase().includes('weekending')); return k ? d[k] : null; })();
+      if (rawWeek === null || rawWeek === undefined) return;
+      const label = typeof rawWeek === 'number' && rawWeek > 1000
+        ? excelSerialToLabel(rawWeek)
+        : String(rawWeek);
+      if (label && weekMap[label] === undefined) {
+        weekMap[label] = weekLabels.length;
+        weekLabels.push(label);
+      }
+    });
+
+    // Use JSON weeks array if data-derived one is empty
+    WEEKS       = weekLabels.length ? weekLabels : (json.weeks || []);
+    WEEK_LABELS = WEEKS;
+
+    // Rebuild weekMap from final WEEKS
+    WEEKS.forEach((lbl, i) => { weekMap[lbl] = i; });
+
+    // Map records
+    RAW = validRows.map(d => {
+      const site = d['site'] || d['Site Name'] || '';
+      const rawWeek = d['week'] !== undefined
+        ? d['week']
+        : (() => { const k = Object.keys(d).find(k => k.replace(/[\n\r]/g,'').toLowerCase().includes('weekending')); return k ? d[k] : null; })();
+      const label = rawWeek !== null && rawWeek !== undefined
+        ? (typeof rawWeek === 'number' && rawWeek > 1000 ? excelSerialToLabel(rawWeek) : String(rawWeek))
+        : null;
+      const w = label !== null ? (weekMap[label] !== undefined ? weekMap[label] : -1) : (d['week'] || 0);
+
+      // Get value by finding key that normalises to target
+      const v = (target) => {
+        const direct = d[target];
+        if (direct !== undefined && direct !== '') return parseFloat(direct) || 0;
+        const norm = target.replace(/[^a-z0-9]/gi,'').toLowerCase();
+        const k = Object.keys(d).find(k => k.replace(/[^a-z0-9]/gi,'').toLowerCase() === norm);
+        return k ? (parseFloat(d[k]) || 0) : 0;
+      };
+
+      return {
+        s: site, w,
+        req:  v('hc_req')  || v('HeadcountRequired'),
+        act:  v('hc_act')  || v('HeadcountActual'),
+        hrs:  v('hours')   || v('HoursWorked'),
+        sa:   v('shifts_avail')  || v('ShiftsAvailable'),
+        sab:  v('shifts_absent') || v('ShiftsAbsent'),
+        lv:   v('leavers') || v('Leaversweek'),
+        st:   v('starters')|| v('Startersweek'),
+        rtw:  v('rtw_pct') || v('RTWChecked'),
+        ind:  v('induction_pct') || v('InductionComplete'),
+        awr:  v('awr_workers')   || v('AWRWorkers'),
+        awra: v('awr_approaching')|| v('WorkersApproachingAWRopt'),
+      };
+    }).filter(d => d.w >= 0);
+
     SITES = (json.sites && json.sites.length)
       ? json.sites
       : [...new Set(RAW.map(d => d.s).filter(Boolean))];
+
     document.getElementById('updatedTag').textContent = 'W/E ' + json.last_updated;
     populateSiteFilter();
     populateWeekFilter();
     render();
   })
   .catch(err => {
-    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-      showError('If viewing locally, open via Live Server in VS Code rather than double-clicking the file.');
-    } else {
-      showError(err.message);
-    }
+    showError(err.message);
   });
 </script>
 </body>
