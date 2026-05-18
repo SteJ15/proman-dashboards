@@ -852,7 +852,7 @@ fetch(DATA_FILE)
     validRows.forEach(d => {
       const rawWeek = d['week'] !== undefined
         ? d['week']
-        : (() => { const k = Object.keys(d).find(k => k.replace(/[\n\r]/g,'').toLowerCase().includes('weekending')); return k ? d[k] : null; })();
+        : (() => { const k = Object.keys(d).find(k => k.toLowerCase().includes('week ending') || k.replace(/[\n\r]/g,' ').toLowerCase().includes('week ending')); return k ? d[k] : null; })();
       if (rawWeek === null || rawWeek === undefined) return;
       const label = typeof rawWeek === 'number' && rawWeek > 1000
         ? excelSerialToLabel(rawWeek)
@@ -875,7 +875,7 @@ fetch(DATA_FILE)
       const site = d['site'] || d['Site Name'] || '';
       const rawWeek = d['week'] !== undefined
         ? d['week']
-        : (() => { const k = Object.keys(d).find(k => k.replace(/[\n\r]/g,'').toLowerCase().includes('weekending')); return k ? d[k] : null; })();
+        : (() => { const k = Object.keys(d).find(k => k.toLowerCase().includes('week ending') || k.replace(/[\n\r]/g,' ').toLowerCase().includes('week ending')); return k ? d[k] : null; })();
       const label = rawWeek !== null && rawWeek !== undefined
         ? (typeof rawWeek === 'number' && rawWeek > 1000 ? excelSerialToLabel(rawWeek) : String(rawWeek))
         : null;
