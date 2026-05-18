@@ -567,7 +567,11 @@ function populateWeekFilter() {
   WEEKS.slice().reverse().forEach((w, i) => {
     const opt = document.createElement('option');
     opt.value = WEEKS.length - 1 - i;
-    opt.textContent = 'W/E ' + w;
+    // Convert serial number to readable date if needed
+    const label = (!isNaN(w) && parseFloat(w) > 1000)
+      ? excelSerialToLabel(parseFloat(w))
+      : w;
+    opt.textContent = 'W/E ' + (label || w);
     if (i === 0) opt.selected = true;
     sel.appendChild(opt);
   });
@@ -600,7 +604,9 @@ function aggregateForView(site) {
 function getChartLabels() {
   if (currentView === 'monthly') return ['Feb','Mar','Apr','May'];
   if (currentView === 'ytd')     return ['Jan','Feb','Mar','Apr','May'];
-  return WEEK_LABELS;
+  return WEEK_LABELS.map(w =>
+    (!isNaN(w) && parseFloat(w) > 1000) ? excelSerialToLabel(parseFloat(w)) : w
+  );
 }
 
 function render() {
